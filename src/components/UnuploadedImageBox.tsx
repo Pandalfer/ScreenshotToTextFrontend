@@ -72,7 +72,12 @@ function UploadBox({
           <div
             className={`${theme ? "dark" : ""} text-(--text-body-light) dark:text-(--text-body-dark) text-base font-bold font-['Inter'] text-center`}
           >
-            Paste Images Here
+            Click to attach files!
+          </div>
+          <div
+            className={`${theme ? "dark" : ""} text-(--text-body-light) dark:text-(--text-body-dark) text-base font-['Inter'] text-center`}
+          >
+            or Paste Images!
           </div>
         </div>
       </div>
