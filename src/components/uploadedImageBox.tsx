@@ -9,7 +9,7 @@ import { showToast, ThemedToastContainer } from "./Toasts.tsx";
 function UploadedImageBox({ image, theme, imageName, onUpload }: { image: File; theme: string; imageName: string, onUpload: (file: File | null) => void }) {
 	const [imageURL, setImageURL] = useState<string>("");
 	const [imageText, setImageText] = useState<string>("");
-
+	const [loading, setLoading] = useState(true);
 	const copyNotify = () => showToast("Copied!", theme, "success", FaCopy);
 	const downloadNotify = () => showToast("Downloaded!", theme, "success", FaDownload);
 	const downloadTextFile = (text: string, filename: string) => {
@@ -29,34 +29,37 @@ function UploadedImageBox({ image, theme, imageName, onUpload }: { image: File; 
 
 
 	useEffect(() => {
-
-		const url = URL.createObjectURL(image);
-		setImageURL(url);
-
-		const getImageText = async () => {
-			try {
-				const formData = new FormData();
-				formData.append("file", image); // must be 'file' matching FastAPI param
-
-				const response = await api.post("/image", formData, {
-					headers: {
-						"Content-Type": "multipart/form-data",
-					},
-				});
-
-				setImageText(response.data.text);
-			} catch (error) {
-				console.error("Failed to get image text:", error);
-			}
-		};
-
-		getImageText();
-
-		// Cleanup URL object on unmount or image change
-		return () => {
-			URL.revokeObjectURL(url);
-		};
+	  const url = URL.createObjectURL(image);
+	  setImageURL(url);
+	
+	  const getImageText = async () => {
+	    setLoading(true);
+	    try {
+	      const formData = new FormData();
+	      formData.append("file", image);
+	
+	      const response = await api.post("/image", formData, {
+	        headers: {
+	          "Content-Type": "multipart/form-data",
+	        },
+	      });
+	
+	      setImageText(response.data.text);
+	    } catch (error) {
+	      console.error("Failed to get image text:", error);
+	      setImageText("Failed to load text");
+	    } finally {
+	      setLoading(false);
+	    }
+	  };
+	
+	  getImageText();
+	
+	  return () => {
+	    URL.revokeObjectURL(url);
+	  };
 	}, [image]);
+
 
 	return (
 		<div
@@ -116,8 +119,9 @@ function UploadedImageBox({ image, theme, imageName, onUpload }: { image: File; 
 				<hr className="w-[100%] rounded-sm mb-10 border border-(--border)"/>
 
 				<p className={`${theme ? "dark" : ""} text-(--text-body-light) dark:text-(--text-body-dark) m-4 mb-10`}>
-					{imageText}
+				  {loading ? "Please Wait..." : imageText}
 				</p>
+
 			</div>
 			<ThemedToastContainer theme={theme} />
 
