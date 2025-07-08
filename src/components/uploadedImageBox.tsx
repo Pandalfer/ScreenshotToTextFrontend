@@ -71,7 +71,7 @@ function UploadedImageBox({
 
   return (
     <div
-      className={`${theme ? "dark" : ""} bg-(--card-light) dark:bg-(--card-dark) w-3/4 h-[60%] relative rounded-[35px] m-auto`}
+      className={`${theme ? "dark" : ""} bg-(--card-light) dark:bg-(--card-dark) w-3/4 min-h-[60%] relative rounded-[35px] m-auto`}
     >
       <button
         className={`${theme ? "dark" : ""} bg-(--button-light) dark:bg-(--button-dark)
@@ -95,7 +95,9 @@ function UploadedImageBox({
               />
             )}
             <p
-              className={`${theme ? "dark" : ""} text-(--text-body-light) dark:text-(--text-body-dark)`}
+              className={`truncate overflow-hidden whitespace-nowrap ${theme ? "dark" : ""} 
+						  text-(--text-body-light) dark:text-(--text-body-dark) 
+						  w-40 sm:w-64 md:w-96`}
             >
               {imageName}
             </p>
