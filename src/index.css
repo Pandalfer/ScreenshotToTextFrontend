@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+
+	--text-main-light: hsl(0, 0%, 10%);
+	--text-body-light: hsl(0, 0%, 35%);
+	--text-main-dark: hsl(0, 0%, 95%);
+	--text-body-dark: hsl(0, 0%, 70%);
+	--background-light: hsl(0, 0%, 95%);
+	--background-dark: hsl(0, 0%, 5%);
+	--card-light: hsl(0, 0%, 90%);
+	--card-dark: hsl(0, 0%, 10%);
+	--button-light: hsl(0, 0%, 85%);
+	--button-dark: hsl(0, 0%, 15%);
+	--hover-light: hsl(0, 0%, 85%);
+	--hover-dark: hsl(0, 0%, 15%);
+	--border: hsl(0, 0%, 60%);
+}
+
+:root{
+	font-family: "Inter", sans-serif;
+}
