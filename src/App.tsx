@@ -7,7 +7,7 @@ import {useState} from "react";
 
 function App() {
 
-  const [ theme, setTheme ] = useState('');
+  const [ theme, setTheme ] = useState('dark');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   return (
     <>
