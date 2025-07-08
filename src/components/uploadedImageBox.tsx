@@ -3,7 +3,7 @@ import api from "../api";
 import { FaCopy } from "react-icons/fa";
 import { FaDownload } from "react-icons/fa";
 import { showToast, ThemedToastContainer } from "./Toasts.tsx";
-
+import LoadingAnimation from "./LoadingAnimation.tsx";
 
 
 function UploadedImageBox({ image, theme, imageName, onUpload }: { image: File; theme: string; imageName: string, onUpload: (file: File | null) => void }) {
@@ -29,35 +29,35 @@ function UploadedImageBox({ image, theme, imageName, onUpload }: { image: File; 
 
 
 	useEffect(() => {
-	  const url = URL.createObjectURL(image);
-	  setImageURL(url);
-	
-	  const getImageText = async () => {
-	    setLoading(true);
-	    try {
-	      const formData = new FormData();
-	      formData.append("file", image);
-	
-	      const response = await api.post("/image", formData, {
-	        headers: {
-	          "Content-Type": "multipart/form-data",
-	        },
-	      });
-	
-	      setImageText(response.data.text);
-	    } catch (error) {
-	      console.error("Failed to get image text:", error);
-	      setImageText("Failed to load text");
-	    } finally {
-	      setLoading(false);
-	    }
-	  };
-	
-	  getImageText();
-	
-	  return () => {
-	    URL.revokeObjectURL(url);
-	  };
+		const url = URL.createObjectURL(image);
+		setImageURL(url);
+
+		const getImageText = async () => {
+			setLoading(true);
+			try {
+				const formData = new FormData();
+				formData.append("file", image);
+
+				const response = await api.post("/image", formData, {
+					headers: {
+						"Content-Type": "multipart/form-data",
+					},
+				});
+
+				setImageText(response.data.text);
+			} catch (error) {
+				console.error("Failed to get image text:", error);
+				setImageText("Failed to load text");
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		getImageText();
+
+		return () => {
+			URL.revokeObjectURL(url);
+		};
 	}, [image]);
 
 
@@ -109,7 +109,7 @@ function UploadedImageBox({ image, theme, imageName, onUpload }: { image: File; 
 								size={25} // smaller icon size to fit
 							/>
 							<p className={`${theme ? "dark" : ""} text-(--text-body-light) dark:text-(--text-body-dark) `}
-							   >
+							>
 								Download
 							</p>
 						</div>
@@ -119,7 +119,16 @@ function UploadedImageBox({ image, theme, imageName, onUpload }: { image: File; 
 				<hr className="w-[100%] rounded-sm mb-10 border border-(--border)"/>
 
 				<p className={`${theme ? "dark" : ""} text-(--text-body-light) dark:text-(--text-body-dark) m-4 mb-10`}>
-				  {loading ? "Please Wait..." : imageText}
+
+					{loading ? (
+						<div className="flex items-center space-x-4">
+							<LoadingAnimation />
+							<p>Please Wait...</p>
+						</div>
+					) : (
+						imageText
+					)}
+
 				</p>
 
 			</div>
