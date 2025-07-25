@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import api from "../api";
 import { FaCopy } from "react-icons/fa";
 import { FaDownload } from "react-icons/fa";
 import { showToast, ThemedToastContainer } from "./Toasts.tsx";
 import LoadingAnimation from "./LoadingAnimation.tsx";
+import Tesseract from "tesseract.js";
+import { preprocessImage } from "../../api/ProcessImage.ts";
 
 function UploadedImageBox({
   image,
@@ -19,20 +20,19 @@ function UploadedImageBox({
   const [imageURL, setImageURL] = useState<string>("");
   const [imageText, setImageText] = useState<string>("");
   const [loading, setLoading] = useState(true);
+
   const copyNotify = () => showToast("Copied!", theme, "success", FaCopy);
   const downloadNotify = () =>
     showToast("Downloaded!", theme, "success", FaDownload);
+
   const downloadTextFile = (text: string, filename: string) => {
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-
-    // Clean up
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
@@ -41,28 +41,36 @@ function UploadedImageBox({
     const url = URL.createObjectURL(image);
     setImageURL(url);
 
-    const getImageText = async () => {
+    const recognizeText = async () => {
       setLoading(true);
       try {
-        const formData = new FormData();
-        formData.append("file", image);
+        const preprocessedBlob = await preprocessImage(image);
 
-        const response = await api.post("/image", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        const result = await Tesseract.recognize(preprocessedBlob, "eng", {
+          logger: (m: any) => console.log(m),
+          config: [
+            "--psm 6",
+            "tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789,.?!-",
+          ],
+        } as any);
 
-        setImageText(response.data.text);
-      } catch (error) {
-        console.error("Failed to get image text:", error);
-        setImageText("Failed to load text");
+        // Post-process: remove short/empty lines & weird chars
+        const filteredText = result.data.text
+          .split("\n")
+          .filter((line) => line.trim().length > 2)
+          .map((line) => line.replace(/[^\w\s.,?!-]/g, ""))
+          .join("\n");
+
+        setImageText(filteredText);
+      } catch (err) {
+        setImageText("Failed to extract text");
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    getImageText();
+    recognizeText();
 
     return () => {
       URL.revokeObjectURL(url);
@@ -150,7 +158,7 @@ function UploadedImageBox({
 
         <hr className="w-[100%] rounded-sm mb-10 border border-(--border)" />
 
-        <p
+        <div
           className={`${theme ? "dark" : ""} text-(--text-body-light) dark:text-(--text-body-dark) m-4 mb-10`}
         >
           {loading ? (
@@ -159,9 +167,9 @@ function UploadedImageBox({
               <p>Please Wait...</p>
             </div>
           ) : (
-            imageText
+            <p>{imageText}</p>
           )}
-        </p>
+        </div>
       </div>
       <ThemedToastContainer theme={theme} />
     </div>
