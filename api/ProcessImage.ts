@@ -1,4 +1,4 @@
-import { otsuCustomThreshold } from "./binarize.ts";
+// import { otsuCustomThreshold } from "./binarize.ts";
 import { openMorph } from "./openMorph.ts";
 import { deskewImage } from "./deskew.ts";
 
@@ -23,9 +23,18 @@ export const preprocessImage = (file: File): Promise<Blob> => {
         cv.bitwise_not(gray, gray);
       }
 
-      const thresholdValue = otsuCustomThreshold(gray);
       const binarized = new cv.Mat();
+      const thresholdValue = cv.threshold(
+        gray,
+        binarized,
+        0,
+        255,
+        cv.THRESH_BINARY + cv.THRESH_OTSU,
+      );
       cv.threshold(gray, binarized, thresholdValue, 255, cv.THRESH_BINARY);
+      const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
+      clahe.apply(gray, gray);
+      clahe.delete();
 
       let finalMat = binarized;
 

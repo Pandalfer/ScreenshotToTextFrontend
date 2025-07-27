@@ -47,21 +47,52 @@ function UploadedImageBox({
         const preprocessedBlob = await preprocessImage(image);
 
         const result = await Tesseract.recognize(preprocessedBlob, "eng", {
-          logger: (m: any) => console.log(m),
           config: [
-            "--psm 6",
-            "tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789,.?!-",
+            "--oem 1",
+            "--psm 4",
+            "tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?()\"':;-% ",
           ],
         } as any);
 
         // Post-process: remove short/empty lines & weird chars
         const filteredText = result.data.text
           .split("\n")
-          .filter((line) => line.trim().length > 2)
-          .map((line) => line.replace(/[^\w\s.,?!-]/g, ""))
-          .join("\n");
+          .map((line) =>
+            line
+              .replace(/[^\w\s.,'";:!?()@%\-]/g, "") // allow useful punctuation
+              .replace(/\b([a-z])\b/g, "") // kill lone noise letters like "a" or "z"
+              .replace(/\s{2,}/g, " ") // remove extra spacing
+              .replace(/[\u2018\u2019\u201A\u201B\u2039\u203A]/g, "'") // fancy quotes → '
+              .replace(/[\u201C\u201D\u201E\u201F]/g, '"') // fancy double quotes → "
+              .replace(/[\u00A0]/g, " ") // non-breaking space → normal space
+              .trim(),
+          )
 
-        setImageText(filteredText);
+          .filter((line) => line.length > 2)
+          .join("\n")
+          .replace(/\n(?=[a-z])/g, " ")
+          .replace(/([a-z])\n([A-Z])/g, "$1. $2")
+          .replace(/\bbefure\b/g, "before"); // known correction
+
+        const fixContractions = (text: string): string => {
+          return text
+            .replace(/\b([A-Za-z]+)n['’]t\b/g, "$1n't") // wont → won't
+            .replace(/\bit['’]s\b/g, "it's")
+            .replace(/\b([A-Za-z]+)['’]ll\b/g, "$1'll")
+            .replace(/\b([A-Za-z]+)['’]re\b/g, "$1're")
+            .replace(/\b([A-Za-z]+)['’]ve\b/g, "$1've")
+            .replace(/\b([A-Za-z]+)['’]d\b/g, "$1'd");
+        };
+
+        const finalText = fixContractions(filteredText);
+
+        const hasReadableText = finalText.trim().length > 3;
+
+        if (!hasReadableText) {
+          setImageText("No text found");
+        } else {
+          setImageText(finalText);
+        }
       } catch (err) {
         setImageText("Failed to extract text");
         console.error(err);
