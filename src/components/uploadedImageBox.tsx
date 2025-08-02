@@ -3,6 +3,8 @@ import { FaCopy } from "react-icons/fa";
 import { FaDownload } from "react-icons/fa";
 import { showToast, ThemedToastContainer } from "./Toasts.tsx";
 import LoadingAnimation from "./LoadingAnimation.tsx";
+import Tesseract from "tesseract.js";
+import { preprocessImage } from "../../api/ProcessImage.ts";
 
 function UploadedImageBox({
   image,
@@ -40,43 +42,62 @@ function UploadedImageBox({
     setImageURL(url);
 
     const recognizeText = async () => {
-      setLoading(true); // Set loading state to true
-
+      setLoading(true);
       try {
-        // Preprocess the image first
+        const preprocessedBlob = await preprocessImage(image);
 
-        // Create FormData to send the image to the backend OCR API (ocr.py)
-        const formData = new FormData();
-        formData.append("file", image, "image.png"); // Preprocessed image
+        const result = await Tesseract.recognize(preprocessedBlob, "eng", {
+          config: [
+            "--oem 1",
+            "--psm 4",
+            "tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?()\"':;-% ",
+          ],
+        } as any);
 
-        // Make the API request to the serverless function (e.g., /api/ocr)
-        const response = await fetch("/api/ocr", {
-          method: "POST",
-          body: formData,
-        });
+        // Post-process: remove short/empty lines & weird chars
+        const filteredText = result.data.text
+          .split("\n")
+          .map((line) =>
+            line
+              .replace(/[^\w\s.,'";:!?()@%\-]/g, "") // allow useful punctuation
+              .replace(/\b([a-z])\b/g, "") // kill lone noise letters like "a" or "z"
+              .replace(/\s{2,}/g, " ") // remove extra spacing
+              .replace(/[\u2018\u2019\u201A\u201B\u2039\u203A]/g, "'") // fancy quotes → '
+              .replace(/[\u201C\u201D\u201E\u201F]/g, '"') // fancy double quotes → "
+              .replace(/[\u00A0]/g, " ") // non-breaking space → normal space
+              .trim(),
+          )
 
-        // Check if the response is OK
-        if (!response.ok) {
-          throw new Error(`Error: ${response.statusText}`);
-        }
+          .filter((line) => line.length > 2)
+          .join("\n")
+          .replace(/\n(?=[a-z])/g, " ")
+          .replace(/([a-z])\n([A-Z])/g, "$1. $2")
+          .replace(/\bbefure\b/g, "before"); // known correction
 
-        // Parse the response from the serverless function
-        const json = await response.json();
+        const fixContractions = (text: string): string => {
+          return text
+            .replace(/\b([A-Za-z]+)n['’]t\b/g, "$1n't") // wont → won't
+            .replace(/\bit['’]s\b/g, "it's")
+            .replace(/\b([A-Za-z]+)['’]ll\b/g, "$1'll")
+            .replace(/\b([A-Za-z]+)['’]re\b/g, "$1're")
+            .replace(/\b([A-Za-z]+)['’]ve\b/g, "$1've")
+            .replace(/\b([A-Za-z]+)['’]d\b/g, "$1'd");
+        };
 
-        // Extract the text from the response
-        const extractedText = json?.text || ""; // Assuming your OCR API returns a 'text' field
+        const finalText = fixContractions(filteredText);
 
-        // Set the extracted text or fallback message
-        if (extractedText.trim()) {
-          setImageText(extractedText);
-        } else {
+        const hasReadableText = finalText.trim().length > 3;
+
+        if (!hasReadableText) {
           setImageText("No text found");
+        } else {
+          setImageText(finalText);
         }
       } catch (err) {
-        console.error("OCR error:", err);
         setImageText("Failed to extract text");
+        console.error(err);
       } finally {
-        setLoading(false); // Turn off the loading state
+        setLoading(false);
       }
     };
 
