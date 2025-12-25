@@ -3,7 +3,7 @@
 **Free image extraction**
 Textana is a free extraction tool that allows users to paste more prompts into llms, by bypassing the image limit
 
-**Features**
+## **Features**
 - Clean and intuitive UI
 - Image processing to improve results
 - Binarization
